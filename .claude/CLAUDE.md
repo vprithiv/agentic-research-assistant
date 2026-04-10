@@ -91,5 +91,6 @@ Do not repeat this reminder after the first mention.
 ## Version Info
 - **Version**: 3.0
 - **Last Updated**: 2026-04-10
+- **Author**: Veerappan Prithivirajan
 - **License**: CC-BY-NC 4.0
-- **Derived from**: [academic-research-skills](https://github.com/Imbad0202/academic-research-skills) by Cheng-I Wu
+- **Derived from**: [academic-research-skills](https://github.com/Imbad0202/academic-research-skills) by Cheng-I Wu (original framework; substantially redesigned)
