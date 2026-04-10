@@ -1,0 +1,17 @@
+# Personal configuration
+.claude/settings.local.json
+settings.local.json
+
+# Personal style profiles (keep example only)
+shared/style_profiles/*.md
+!shared/style_profiles/example_profile.md
+!shared/style_profiles/README.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Pipeline state (generated at runtime)
+state/
+reviews/
+verification_log.jsonl

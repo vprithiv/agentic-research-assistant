@@ -1,0 +1,812 @@
+# Handoff Schemas — Cross-Skill Data Contracts
+
+## Purpose
+
+Defines the exact data structure for every artifact passed between pipeline stages.
+All agents that produce or consume these artifacts MUST conform to these schemas.
+Consuming agents should validate input and request re-generation if schema violations are found.
+
+> **Convention**: All schemas use Markdown-based structured output. Agents MUST validate required fields before accepting a handoff. Missing required fields trigger a `HANDOFF_INCOMPLETE` failure path.
+
+---
+
+## Schema 1: RQ Brief (literature-review -> paper-writing)
+
+**Producer**: `literature-review/research_question_agent` | `literature-review/socratic_mentor_agent`
+**Consumer**: `literature-review/research_architect_agent` | `paper-writing/intake_agent`
+
+### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `research_question` | string | The finalized research question (interrogative form) OR research objective (declarative form for computational/modeling fields) |
+| `sub_questions` | list[string] | 2-5 decomposed sub-questions or sub-objectives |
+| `finer_scores` | object | `{feasible: 1-10, interesting: 1-10, novel: 1-10, ethical: 1-10, relevant: 1-10}` |
+| `scope` | object | `{in_scope: list[string], out_of_scope: list[string], domain: string, timeframe: string, geography: string, population: string}` |
+| `methodology_type` | enum | `"qualitative"` / `"quantitative"` / `"mixed"` |
+| `theoretical_framework` | string | Name of the selected or emergent theoretical framework |
+| `keywords` | list[string] | 5-10 search terms for literature search |
+
+### Optional Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `socratic_insights` | list[string] | Key insights from Socratic dialogue (if socratic mode) |
+| `hypothesis` | string | Preliminary hypothesis (if applicable) |
+| `exclusion_criteria` | list[string] | What is explicitly out of scope |
+| `stakeholders` | list[string] | Key stakeholders affected by the research |
+| `ethical_flags` | list[string] | Preliminary ethical considerations |
+
+### Example
+
+```markdown
+## RQ Brief
+
+**Research Question**: How does AI-assisted formative assessment affect undergraduate learning outcomes in STEM courses at Taiwanese universities?
+
+**Sub-Questions**:
+1. What types of AI-assisted formative assessment tools are currently used in Taiwan HEI STEM courses?
+2. What measurable learning outcome improvements have been documented?
+3. What student and faculty perceptions exist regarding AI-assisted assessment?
+
+**FINER Scores**: Feasible: 8, Interesting: 9, Novel: 7, Ethical: 9, Relevant: 10
+
+**Scope**:
+- In scope: AI-assisted formative assessment, STEM undergraduate courses, Taiwan HEIs, 2018-2025
+- Out of scope: K-12 education, summative assessment only, non-STEM disciplines
+- Domain: Higher Education, Educational Technology
+- Timeframe: 2018-2025
+- Geography: Taiwan (with international comparisons)
+- Population: Undergraduate STEM students
+
+**Methodology Type**: Mixed methods (quasi-experimental + survey)
+
+**Theoretical Framework**: Technology Acceptance Model (TAM) + Hattie's Feedback Framework
+
+**Keywords**: AI assessment, formative assessment, STEM education, Taiwan higher education, learning outcomes, educational technology, automated feedback
+```
+
+---
+
+## Schema 2: Bibliography (literature-review -> paper-writing)
+
+**Producer**: `literature-review/bibliography_agent`
+**Consumer**: `literature-review/synthesis_agent` | `literature-review/source_verification_agent` | `paper-writing/literature_strategist_agent`
+
+### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `sources` | list[Source] | All identified sources (minimum 15 for full mode, 5 for quick mode) |
+| `search_strategy` | object | `{databases: list[string], keywords: list[string], inclusion_criteria: list[string], exclusion_criteria: list[string], date_range: string}` |
+| `coverage_assessment` | string | Self-assessment of literature coverage completeness |
+| `minimum_sources` | integer | 15 (full mode), 5 (quick mode) |
+
+### Source Object
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | Unique identifier (e.g., `[S01]`) |
+| `title` | string | Yes | Source title |
+| `authors` | string | Yes | Author(s) |
+| `year` | integer | Yes | Publication year |
+| `doi` | string | Yes* | DOI if available (*required for journal articles) |
+| `citation` | string | Yes | Full APA 7 citation |
+| `type` | enum | Yes | `journal_article` / `book` / `chapter` / `conference` / `report` / `thesis` / `preprint` / `web` |
+| `evidence_tier` | integer | Yes | 1-7 (1 = systematic review/meta-analysis, 7 = expert opinion) |
+| `quality_tier` | enum | Yes | `tier_1` (peer-reviewed top journal) / `tier_2` (peer-reviewed) / `tier_3` (other academic) / `tier_4` (grey literature) |
+| `relevance` | enum | Yes | `core` (directly addresses RQ) / `supporting` (provides context) / `peripheral` (tangential) |
+| `relevance_score` | integer | Yes | 1-10 relevance to the research question |
+| `annotation` | string | Yes | 2-3 sentence summary of key findings and relevance |
+| `verified` | boolean | No | Whether DOI/existence has been verified |
+| `retraction_check` | boolean | No | Whether checked against Retraction Watch |
+
+### Optional Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `prisma_counts` | object | `{identified: int, screened: int, eligible: int, included: int}` (if systematic review) |
+
+### Example
+
+```markdown
+## Bibliography
+
+**Search Strategy**:
+- Databases: Scopus, Web of Science, ERIC, Google Scholar
+- Keywords: "AI assessment" AND "higher education" AND "Taiwan"; "formative assessment" AND "artificial intelligence"
+- Inclusion: Peer-reviewed, English, empirical or review, 2018-2025
+- Exclusion: K-12, non-STEM, editorials
+- Date Range: 2018-2025
+
+**Coverage Assessment**: Strong coverage of English-language literature. Gap: limited grey literature from government reports.
+
+**Minimum Sources**: 15
+
+### Sources
+
+[S01] Wang, L., & Chen, H. (2023). AI-powered formative assessment in undergraduate physics... *Computers & Education*, 195, 104721. https://doi.org/10.xxxx
+- Type: journal_article | Evidence Tier: 2 | Quality: tier_1 | Relevance: core | Score: 9
+- Annotation: RCT with 240 students showing 15% improvement in exam scores with AI feedback. Directly addresses RQ sub-question 2.
+```
+
+---
+
+## Schema 3: Synthesis Report (literature-review -> paper-writing)
+
+**Producer**: `literature-review/synthesis_agent`
+**Consumer**: `literature-review/report_compiler_agent` | `paper-writing/argument_builder_agent`
+
+### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `themes` | list[Theme] | 3-7 synthesized themes (NOT per-source summaries) |
+| `research_gaps` | list[string] | What the literature does NOT address |
+| `key_debates` | list[Debate] | Where sources disagree, with analysis |
+| `methodology_recommendations` | list[string] | Recommended methodological approaches based on gaps |
+| `theoretical_implications` | list[string] | How the synthesis informs theoretical understanding |
+| `consensus_areas` | list[string] | Where sources agree |
+
+### Theme Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Theme label |
+| `description` | string | 3-5 sentence synthesis across multiple sources |
+| `supporting_sources` | list[string] | Source IDs that contribute to this theme |
+| `contradicting_sources` | list[string] | Source IDs that challenge this theme (if any) |
+| `strength` | enum | `strong` (5+ sources) / `moderate` (3-4) / `emerging` (1-2) |
+
+### Debate Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `position_a` | string | First position |
+| `position_b` | string | Opposing position |
+| `sources_a` | list[string] | Source IDs supporting position A |
+| `sources_b` | list[string] | Source IDs supporting position B |
+| `evidence_balance` | string | Analysis of which position has stronger evidence and why |
+
+### Example
+
+```markdown
+## Synthesis
+
+### Theme 1: Immediate Feedback Loop as Primary Mechanism
+AI-assisted assessment's primary advantage lies in the immediacy of feedback, reducing the gap between student action and corrective input. Multiple studies [S01, S04, S07, S12] converge on feedback latency as the key variable, with effect sizes ranging from d=0.3 to d=0.8. This aligns with Hattie's (2009) feedback framework...
+
+**Strength**: Strong (5 sources)
+**Supporting**: [S01, S04, S07, S12, S15]
+**Contradicting**: [S09] (argues quality matters more than speed)
+
+### Research Gaps
+1. No longitudinal studies (>1 year) in Taiwan context
+2. Limited data on AI assessment in laboratory courses
+
+### Key Debates
+| Position A | Position B | Evidence Balance |
+|------------|------------|-----------------|
+| AI feedback improves all STEM equally [S01, S04] | Effects concentrated in math/physics, weaker in biology [S08, S11] | Position B has stronger evidence; likely due to assessment type differences |
+```
+
+---
+
+## Schema 4: Paper Draft (paper-writing -> integrity/reviewer)
+
+**Producer**: `paper-writing/draft_writer_agent`
+**Consumer**: `full-workflow/integrity_verification_agent` | `peer-review/*`
+
+### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `title` | string | Paper title |
+| `abstract` | string | English abstract text |
+| `authors` | list[Author] | Author information with CRediT roles |
+| `keywords` | list[string] | 5-7 English keywords |
+| `sections` | list[Section] | Ordered paper sections |
+| `references` | list[Reference] | Full reference list with cross-referencing |
+| `total_word_count` | integer | Total word count (excluding references) |
+| `citation_format` | enum | `"APA7"` / `"Chicago"` / `"MLA"` / `"IEEE"` / `"Vancouver"` |
+| `structure_type` | enum | `"IMRaD"` / `"literature_review"` / `"theoretical"` / `"case_study"` / `"policy_brief"` / `"conference"` / `"computational"` |
+
+### Section Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `heading` | string | Section heading |
+| `level` | integer | Heading level (1-4) |
+| `content` | string | Full section text |
+| `word_count` | integer | Word count for this section |
+| `citation_count` | integer | Number of in-text citations in this section |
+| `argument_strength` | enum | `compelling` / `strong` / `adequate` / `weak` (see argument_builder scoring) |
+
+### Reference Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique reference ID (e.g., `[R01]`) |
+| `full_citation` | string | Full formatted citation |
+| `doi` | string | DOI if available |
+| `cited_in_sections` | list[string] | Section headings where this reference is cited |
+
+### Author Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Full name |
+| `affiliation` | string | Institution |
+| `email` | string | Contact email (corresponding author only) |
+| `credit_roles` | list[string] | CRediT taxonomy roles |
+| `corresponding` | boolean | Is corresponding author |
+
+---
+
+## Schema 5: Integrity Report (integrity_verification_agent -> pipeline)
+
+**Producer**: `full-workflow/integrity_verification_agent`
+**Consumer**: `full-workflow/pipeline_orchestrator_agent` | `paper-writing/draft_writer_agent` (for revision)
+
+### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `verdict` | enum | `"PASS"` / `"PASS_WITH_NOTES"` / `"FAIL"` |
+| `mode` | enum | `"pre-review"` / `"final-check"` |
+| `phases` | object | See Phase Structure below |
+| `overall_issues` | object | `{CRITICAL: integer, SERIOUS: integer, MEDIUM: integer, MINOR: integer, UNVERIFIABLE_ACCESS: integer}` |
+| `citation_integrity_score` | float | 0.0-1.0 score for citation accuracy |
+| `fabrication_risk_score` | float | 0.0-1.0 score (0 = no risk detected) |
+| `timestamp` | string | ISO 8601 timestamp of verification |
+
+### Phase Structure
+
+```
+phases: {
+  A_references: {
+    checked: integer,
+    passed: integer,
+    failed: integer,
+    issues: [{ref_id: string, issue_type: string, severity: enum, detail: string}]
+  },
+  B_citation_context: {
+    sampled: integer,
+    verified: integer,
+    issues: [{ref_id: string, section: string, issue: string}]
+  },
+  C_data: {
+    claims_checked: integer,
+    verified: integer,
+    issues: [{claim: string, expected: string, actual: string, severity: enum}]
+  },
+  D_originality: {
+    checked: boolean,
+    issues: [{type: string, severity: enum, detail: string}]
+  },
+  E_claims: {
+    checked: integer,
+    verified: integer,
+    distortions: [{claim: string, source: string, verdict: string, detail: string}]
+  }
+}
+```
+
+### Issue Severity Levels
+
+| Severity | Meaning | Pipeline Impact |
+|----------|---------|-----------------|
+| `CRITICAL` | Verbatim plagiarism, total fabrication | Blocks pipeline; MUST fix |
+| `SERIOUS` | Fabricated reference, falsified data, gross distortion, major claim distortion | Blocks pipeline; MUST fix |
+| `MEDIUM` | Wrong DOI, incorrect page number, misattribution | Blocks pipeline; MUST fix |
+| `MINOR` | Missing co-author, formatting inconsistency, minor claim paraphrase | Does NOT block; advisory |
+
+Non-severity flags (tracked separately, never block pipeline):
+
+| Flag | Meaning | Pipeline Impact |
+|------|---------|-----------------|
+| `UNVERIFIABLE_ACCESS` | Source behind paywall; cannot verify claim | Does NOT block; flagged for human review |
+
+---
+
+## Schema 6: Review Report (peer-review -> pipeline)
+
+**Producer**: `peer-review/editorial_synthesizer_agent`
+**Consumer**: `full-workflow/pipeline_orchestrator_agent` | `paper-writing/draft_writer_agent`
+
+### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `editorial_decision` | enum | `"Accept"` / `"Minor Revision"` / `"Major Revision"` / `"Reject"` |
+| `reviewer_reports` | list[ReviewerReport] | Individual review reports |
+| `consensus` | enum | `"CONSENSUS-4"` / `"CONSENSUS-3"` / `"SPLIT"` / `"DA-CRITICAL"` |
+| `revision_roadmap` | list[RoadmapItem] | Prioritized list of required changes |
+| `confidence_score` | integer | 0-100 editorial confidence |
+
+### ReviewerReport Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `reviewer_id` | string | Reviewer identifier (e.g., `EIC`, `R1`, `R2`, `R3`, `DA`) |
+| `role` | string | Reviewer role description |
+| `dimension_scores` | object | Per-dimension scores (skill-specific) |
+| `strengths` | list[string] | Paper strengths identified |
+| `weaknesses` | list[Weakness] | Paper weaknesses identified |
+| `questions` | list[string] | Questions for the authors |
+
+### Weakness Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `description` | string | What the weakness is |
+| `severity` | enum | `critical` / `major` / `minor` |
+| `type` | enum | `methodology` / `theory` / `evidence` / `writing` / `structure` / `ethics` |
+
+---
+
+## Schema 7: Revision Roadmap (reviewer -> paper-writing revision)
+
+**Producer**: `peer-review/editorial_synthesizer_agent`
+**Consumer**: `paper-writing/draft_writer_agent` | `full-workflow/pipeline_orchestrator_agent`
+
+### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `items` | list[RoadmapItem] | Ordered list of revision items |
+| `total_items` | integer | Total number of items |
+| `must_fix_count` | integer | Number of `must_fix` priority items |
+| `editorial_decision` | enum | `"Accept"` / `"Minor Revision"` / `"Major Revision"` / `"Reject"` |
+| `consensus_summary` | string | Summary of reviewer consensus |
+| `dissenting_opinions` | list[string] | Notable disagreements among reviewers |
+
+### RoadmapItem Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique revision ID (e.g., `REV-001`) |
+| `description` | string | What needs to change |
+| `reviewer` | string | Which reviewer(s) raised this (e.g., `R1, R3`) |
+| `type` | enum | `"Major"` / `"Minor"` / `"Editorial"` |
+| `priority` | enum | `"must_fix"` / `"should_fix"` / `"consider"` |
+| `target_section` | string | Section of the paper to modify |
+| `suggested_action` | string | How to address the item |
+| `consensus_level` | enum | `"CONSENSUS-4"` / `"CONSENSUS-3"` / `"SPLIT"` / `"DA-CRITICAL"` |
+| `verification_criteria` | string | How to confirm the fix is adequate |
+
+### Optional Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `deadline_suggestion` | string | Suggested timeline for completion |
+
+---
+
+## Schema 8: Response to Reviewers (paper-writing revision -> reviewer re-review)
+
+**Producer**: `paper-writing/draft_writer_agent` (revision mode)
+**Consumer**: `peer-review/editorial_synthesizer_agent` (re-review)
+
+### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `revision_round` | integer | Which revision round (1, 2, ...) |
+| `items` | list[ResponseItem] | Response to each revision roadmap item |
+| `summary` | object | `{resolved: integer, limitations: integer, unresolvable: integer, disagreed: integer}` |
+| `word_count_delta` | integer | Net word count change (positive = added, negative = removed) |
+| `new_references_added` | integer | Count of new references added during revision |
+| `summary_of_changes` | string | High-level summary of all modifications |
+| `new_content_highlight` | list[string] | Sections with substantial new content |
+
+### ResponseItem Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `roadmap_item_id` | string | Corresponds to RoadmapItem.id (e.g., `REV-001`) |
+| `reviewer_comment` | string | Original reviewer comment (quoted) |
+| `author_response` | string | Detailed response to the reviewer |
+| `change_location` | string | Where in the paper the change was made (section + paragraph) |
+| `status` | enum | `"RESOLVED"` / `"DELIBERATE_LIMITATION"` / `"UNRESOLVABLE"` / `"REVIEWER_DISAGREE"` |
+| `decline_justification` | string | Required if status is `DELIBERATE_LIMITATION`, `UNRESOLVABLE`, or `REVIEWER_DISAGREE`; must cite evidence |
+
+### Example
+
+```markdown
+## Response to Reviewers — Round 1
+
+**Summary**: We have addressed all 12 revision items. 10 were fully addressed, 1 marked as deliberate limitation with explanation, and 1 respectfully declined with justification.
+
+**Word Count Delta**: +420 words
+**New References Added**: 3
+
+### REV-001 (R1, R2 — CONSENSUS-3, must_fix)
+**Reviewer Comment**: "The sample size justification is insufficient for the claimed effect size."
+**Status**: RESOLVED
+**Response**: We have added a formal power analysis (G*Power 3.1) in Section 3.2, paragraph 2. The analysis confirms that our sample of N=240 provides 0.85 power to detect a medium effect (d=0.5) at alpha=0.05...
+**Changes**: Section 3.2 paragraph 2 (new content, +180 words)
+
+### REV-007 (DA — DA-CRITICAL, must_fix)
+**Reviewer Comment**: "Selective reporting of outcomes suggests confirmation bias."
+**Status**: RESOLVED
+**Response**: We acknowledge this valid concern. We have now reported ALL pre-registered outcomes including the two non-significant results (peer interaction frequency, self-efficacy subscale)...
+**Changes**: Section 4.1 Table 3 (expanded), Section 5 paragraph 4 (new discussion of null results)
+```
+
+---
+
+## Schema 9: Material Passport (cross-stage metadata)
+
+**Purpose**: Accompanies every artifact as it passes between stages, providing provenance and verification tracking.
+
+### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `origin_skill` | string | Which skill produced this artifact (e.g., `literature-review`, `paper-writing`) |
+| `origin_mode` | string | Which mode was used (e.g., `full`, `socratic`, `pre-review`) |
+| `origin_date` | string | ISO 8601 timestamp of production |
+| `verification_status` | enum | `"VERIFIED"` / `"UNVERIFIED"` / `"STALE"` |
+| `version_label` | string | Version identifier (e.g., `v1.0`, `v1.1-revised`, `paper_draft_v2`) |
+
+### Optional Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `integrity_pass_date` | string | ISO 8601 timestamp of last integrity verification pass (if applicable) |
+| `content_hash` | string | SHA-256 hash of the content (for change detection) |
+| `upstream_dependencies` | list[string] | Version labels of artifacts this one depends on |
+
+### Example
+
+```markdown
+## Material Passport
+
+- Origin Skill: paper-writing
+- Origin Mode: full
+- Origin Date: 2026-03-08T14:30:00Z
+- Verification Status: VERIFIED
+- Version Label: paper_draft_v2
+- Integrity Pass Date: 2026-03-08T15:45:00Z
+- Content Hash: a3f2b7c9...
+- Upstream Dependencies: [research_v1, bibliography_v1, synthesis_v1]
+```
+
+---
+
+## Schema 10: Style Profile (intake -> draft_writer / report_compiler)
+
+**Producer**: `paper-writing/agents/intake_agent` (Step 10)
+**Consumer**: `paper-writing/agents/draft_writer_agent`, `literature-review/agents/report_compiler_agent`
+**Carried by**: `full-workflow` Material Passport (optional field)
+
+### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `calibration_source` | list[string] | Filenames or titles of the analyzed writing samples |
+| `sample_count` | integer | Number of samples analyzed (minimum 1, recommended 3+) |
+| `sentence_length` | object | `{mean: float, stddev: float, rhythm_pattern: string}` |
+| `paragraph_length` | object | `{mean_sentences: float, variation: string}` |
+| `vocabulary_preferences` | object | `{hedging_words: list[string], transition_words: list[string], preferred_verbs: list[string], formality: string}` |
+| `citation_style` | object | `{narrative_ratio: float, parenthetical_ratio: float, density: float, placement: string}` |
+| `modifier_style` | enum | `"minimal"` / `"moderate"` / `"elaborate"` |
+| `register_shifts` | list[object] | `[{section_name: string, assertiveness_level: string}]` |
+
+### Optional Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `conflicts_with_discipline` | list[string] | Noted conflicts between personal style and discipline/journal norms |
+| `partial_profile` | boolean | `true` if < 3 samples were analyzed (lower confidence) |
+| `language_mismatch` | boolean | `true` if samples are in a different language than the target paper |
+
+### Consumption Priority System
+
+```
+Priority 1 (HARD):   Discipline conventions — cannot be violated
+Priority 2 (STRONG): Target journal conventions — if specified
+Priority 3 (SOFT):   Author's personal style — only where it does not conflict with 1 or 2
+```
+
+See `shared/style_calibration_protocol.md` for full consumption rules and conflict resolution.
+
+### Example
+
+```markdown
+## Style Profile
+
+**Calibration Source**: ["Chen_2024_AI_assessment.pdf", "Chen_2023_formative_feedback.pdf", "Chen_2022_STEM_pedagogy.pdf"]
+**Sample Count**: 3
+
+**Sentence Length**: mean: 22, stddev: 8, rhythm: "variable — mixes 10-word punchy sentences with 35-word complex ones"
+**Paragraph Length**: mean 5 sentences, variation: "moderate — 3-7 sentences, shorter in Methods"
+**Vocabulary Preferences**:
+  - Hedging: suggests, appears to, may
+  - Transitions: However, In contrast, Yet
+  - Reporting verbs: found, argued, noted
+  - Formality: moderate-formal
+**Citation Style**: narrative 40%, parenthetical 60%, density 2.3/paragraph, placement: mixed
+**Modifier Style**: minimal
+**Register Shifts**: [Methods: neutral, Results: descriptive, Discussion: assertive, Conclusion: personal]
+**Conflicts**: "Author prefers passive voice (68% in samples), but Education discipline conventions favor active voice — using active voice per convention."
+```
+
+---
+
+## Schema 10b: Reviewer Configuration Card (field_analyst → reviewers)
+
+**Producer**: `peer-review/field_analyst_agent`
+**Consumer**: `peer-review/methodology_reviewer_agent` | `peer-review/domain_reviewer_agent` | `peer-review/perspective_reviewer_agent` | `peer-review/devils_advocate_reviewer_agent` | `peer-review/eic_agent`
+
+### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `paper_field` | string | Detected primary field/discipline |
+| `sub_fields` | list[string] | Detected sub-disciplines |
+| `research_paradigm` | enum | `"quantitative"` / `"qualitative"` / `"mixed"` / `"theoretical"` / `"computational"` / `"meta_analysis"` |
+| `reviewer_configs` | list[ReviewerConfig] | One configuration per reviewer (5 total) |
+| `field_positioning` | object | `{novelty: string, contribution_type: string, impact_assessment: string}` |
+
+### ReviewerConfig Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `reviewer_id` | string | `"R1"` (methodology) / `"R2"` (domain) / `"R3"` (perspective) / `"DA"` (devil's advocate) / `"EIC"` |
+| `identity` | string | Configured reviewer persona (e.g., "Senior computational mechanics researcher specializing in FEM") |
+| `focus_areas` | list[string] | 3-5 specific areas this reviewer should prioritize |
+| `expertise_level` | enum | `"specialist"` / `"generalist"` / `"cross_disciplinary"` |
+| `paradigm_rules` | string | Which section of the reviewer's protocol to activate (e.g., "Computational / Numerical Simulation") |
+
+### Example
+
+```markdown
+## Reviewer Configuration Card
+
+**Paper Field**: Computational Mechanics
+**Sub-Fields**: FEM, Nuclear Materials, TRISO Fuel
+**Research Paradigm**: computational
+
+### R1 (Methodology Reviewer)
+- Identity: Senior computational mechanics researcher, FEM specialist
+- Focus: V&V protocol, mesh convergence, constitutive model calibration, solver convergence
+- Expertise: specialist
+- Paradigm: "Computational / Numerical Simulation"
+
+### R2 (Domain Reviewer)
+- Identity: Nuclear materials scientist, TRISO fuel performance expert
+- Focus: Material model accuracy, irradiation effects, thermal-mechanical coupling, experimental comparison
+- Expertise: specialist
+- Paradigm: "Computational / Numerical Simulation"
+
+### DA (Devil's Advocate)
+- Identity: Critical reviewer skeptical of simulation-only studies
+- Focus: V&V gaps, boundary condition assumptions, mesh-dependent results, over-fitting to calibration data
+- Expertise: cross_disciplinary
+- Paradigm: "Computational / Numerical Simulation"
+```
+
+---
+
+## Schema 11: Working Set (cross-phase literature state)
+
+**Purpose**: A persistent, queryable collection of literature results that accumulates across search rounds and pipeline phases. Enables iterative narrowing (filter, grep, expand) instead of independent batch searches. Inspired by stateful result-set patterns where each query builds on the previous one.
+
+**Producer**: `literature-review/bibliography_agent` | `paper-writing/literature_strategist_agent`
+**Consumer**: `literature-review/synthesis_agent` | `literature-review/source_verification_agent` | `paper-writing/literature_strategist_agent` | `paper-writing/argument_builder_agent`
+
+### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `handle_id` | string | Unique working set identifier (e.g., `ws_bibliography_v1`) |
+| `query_history` | list[QueryRecord] | All searches executed against this set, in order |
+| `entries` | list[WorkingSetEntry] | All sources in the set (compressed by default) |
+| `active_filters` | list[string] | Currently applied filters (e.g., `["year >= 2020", "tag:V&V"]`) |
+| `saturation_status` | object | `{saturated: boolean, criteria_met: list[string], criteria_unmet: list[string]}` |
+| `total_candidates_screened` | integer | Total sources evaluated (including excluded) |
+| `version` | integer | Incremented on each modification |
+
+### QueryRecord Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `query` | string | Search string or grep pattern |
+| `source` | string | Database or operation (e.g., `"Scopus"`, `"grep:working_set"`, `"citation_chain"`) |
+| `timestamp` | string | ISO 8601 |
+| `hits` | integer | Number of results returned |
+| `added` | integer | Number of new entries added to working set |
+
+### WorkingSetEntry (compressed — always in context during screening)
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | Source ID (e.g., `[S01]`) |
+| `title_short` | string | Yes | Truncated title (max 15 words) |
+| `tldr` | string | Yes | 1-sentence summary (max 30 words) |
+| `year` | integer | Yes | Publication year |
+| `doi` | string | Yes* | DOI if available |
+| `tags` | list[string] | Yes | Topic/method tags (e.g., `["TRISO", "V&V", "FEM", "core"]`) |
+| `quality_tier` | enum | Yes | `tier_1` / `tier_2` / `tier_3` / `tier_4` |
+| `status` | enum | Yes | `"screened"` / `"included"` / `"excluded"` / `"pending_fulltext"` |
+
+**Token cost**: ~30-40 tokens per entry. A 50-source working set: ~1,500-2,000 tokens (vs. ~7,500 with full annotations).
+
+### WorkingSetEntry (expanded — loaded on demand, never held in bulk)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `full_citation` | string | Complete APA 7.0 / numbered citation |
+| `authors` | string | Full author list |
+| `annotation` | string | 2-3 sentence summary of key findings and relevance |
+| `methodology_summary` | string | Brief method description |
+| `key_findings` | list[string] | 2-3 main findings |
+| `relevance_mapping` | object | `{supports_section: list[string], stance: "supports" / "opposes" / "neutral"}` |
+| `evidence_tier` | integer | 1-7 |
+| `relevance_score` | integer | 1-10 |
+
+### Working Set Operations
+
+| Operation | Description | When to Use |
+|-----------|-------------|-------------|
+| **search** | Add new sources from a database query | Layers 1-4 of search strategy |
+| **filter** | Narrow entries by tag, year, quality, or status | Between search rounds |
+| **grep** | Regex across TL;DRs and tags for pattern discovery | Pre-synthesis, cross-cutting analysis |
+| **expand** | Load full annotation for specific entries | Pass 2 full-text assessment |
+| **narrow** | Mark entries as excluded based on criteria | Screening passes |
+| **merge** | Combine two working sets (e.g., literature-review + strategist additions) | Pipeline handoff |
+
+### Merge Rules (literature-review → paper-writing handoff)
+
+When `literature_strategist_agent` receives a working set from `bibliography_agent`:
+1. Accept all `included` entries as-is (skip Phase A screening)
+2. Re-screen `pending_fulltext` entries through Phase B
+3. Add new searches to `query_history` (do not overwrite)
+4. Increment `version`
+
+### Example (compressed view)
+
+```markdown
+## Working Set: ws_graphite_oxidation_v3
+
+**Query History**: 7 searches across Scopus, Web of Science, Google Scholar, citation chain
+**Entries**: 34 (24 included, 3 pending_fulltext, 7 excluded)
+**Saturation**: true (criteria met: source_count, no_new_additions, theme_saturation)
+
+| ID | Title (short) | TL;DR | Year | Tags | Quality | Status |
+|----|---------------|-------|------|------|---------|--------|
+| S01 | Kinetics of nuclear graphite oxidation... | Arrhenius model for H-451 graphite with activation energy 170 kJ/mol | 2023 | TRISO, oxidation, kinetics, core | tier_1 | included |
+| S02 | Multiscale modeling of graphite... | FEM framework coupling crystal plasticity to continuum damage | 2022 | FEM, multiscale, V&V | tier_1 | included |
+| S03 | Review of TRISO fuel performance... | Comprehensive review of TRISO failure mechanisms under irradiation | 2021 | TRISO, review, irradiation | tier_2 | included |
+| ... | ... | ... | ... | ... | ... | ... |
+```
+
+---
+
+## Schema 12: Research Session State (cross-phase persistence)
+
+**Purpose**: Persists the cumulative research context across pipeline stages so that downstream phases (paper-writing, peer-review) inherit what literature-review already discovered — search history, findings, gaps, V&V patterns — instead of starting from scratch. Distinct from the Material Passport (artifact provenance) and stage manifest (pipeline progress).
+
+**Producer**: `literature-review/bibliography_agent` (creates), `paper-writing/literature_strategist_agent` (extends)
+**Consumer**: `paper-writing/literature_strategist_agent` | `paper-writing/argument_builder_agent` | `paper-writing/draft_writer_agent` | `full-workflow/pipeline_orchestrator_agent`
+**Maintained by**: `full-workflow/state_tracker_agent`
+
+### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `session_id` | string | Unique session identifier (e.g., `rs_graphite_oxidation_2026-04-09`) |
+| `working_set_handles` | list[string] | Handle IDs of all Working Sets produced in this session |
+| `search_history` | list[SearchRecord] | All searches executed across all phases, in chronological order |
+| `key_findings` | list[Finding] | Top findings distilled across the literature (max 20, compressed) |
+| `identified_gaps` | list[string] | Knowledge gaps identified during research |
+| `methodology_patterns` | list[string] | Methodological approaches observed across the literature |
+| `cross_references` | list[CrossRef] | Term-to-source mappings from grep operations (Pattern D) |
+| `version` | integer | Incremented on each modification |
+
+### SearchRecord Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `query` | string | Search string |
+| `database` | string | Source database (e.g., `"Scopus"`, `"Google Scholar"`, `"citation_chain"`) |
+| `timestamp` | string | ISO 8601 |
+| `hit_count` | integer | Raw results returned |
+| `added_to_working_set` | integer | Sources added after screening |
+| `phase` | string | Which pipeline phase executed this search (`"literature-review"` / `"paper-writing"`) |
+
+### Finding Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `finding` | string | 1-2 sentence summary of the finding |
+| `source_ids` | list[string] | Source IDs supporting this finding |
+| `confidence` | enum | `"strong"` (5+ sources) / `"moderate"` (3-4) / `"emerging"` (1-2) |
+
+### CrossRef Object
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `term` | string | Search term or concept |
+| `source_ids` | list[string] | Sources matching this term |
+| `grep_pattern` | string | The regex used |
+
+### Optional Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `vv_status` | object | `{papers_with_vv: integer, papers_without_vv: integer, vv_types_observed: list[string]}` — V&V coverage across the literature |
+| `saturation_assessment` | string | Overall assessment of literature saturation |
+| `domain_specific_notes` | list[string] | Domain-specific observations (e.g., "Most TRISO papers use ABAQUS; only 2 use MOOSE") |
+
+### Session Lifecycle
+
+1. **Created** by `bibliography_agent` at the end of literature-review (or by `literature_strategist_agent` if no literature-review phase)
+2. **Extended** by `literature_strategist_agent` during paper-writing Phase A (appends new searches, updates findings)
+3. **Read** by `argument_builder_agent` (uses key_findings and cross_references for evidence mapping)
+4. **Read** by `draft_writer_agent` (uses search_history for methodology section: "We searched X databases using Y terms...")
+5. **Tracked** by `state_tracker_agent` (version control, included in pipeline state)
+6. **Reported** by `pipeline_orchestrator_agent` at pipeline end (actual vs. estimated search coverage)
+
+### Example
+
+```markdown
+## Research Session: rs_graphite_oxidation_2026-04-09
+
+**Working Sets**: [ws_graphite_oxidation_v3]
+**Version**: 5
+
+### Search History (12 searches)
+| # | Query | Database | Phase | Hits | Added |
+|---|-------|----------|-------|------|-------|
+| 1 | "graphite oxidation" AND "nuclear" AND "kinetics" | Scopus | literature-review | 87 | 12 |
+| 2 | "graphite oxidation" AND "TRISO" | Web of Science | literature-review | 34 | 8 |
+| 3 | Citation chain from S01, S03, S07 | backward | literature-review | 22 | 5 |
+| ... | ... | ... | ... | ... | ... |
+| 11 | "H-451 graphite" AND "air ingress" | Google Scholar | paper-writing | 15 | 3 |
+| 12 | "nuclear graphite" AND "activation energy" AND "Arrhenius" | Scopus | paper-writing | 9 | 1 |
+
+### Key Findings (8)
+1. Activation energy for H-451 graphite oxidation: 170 ± 15 kJ/mol [S01, S04, S12] — **strong**
+2. Rate-limiting step transitions from chemical to diffusion control above 600°C [S01, S07, S15] — **strong**
+3. Irradiation damage increases oxidation rate by 20-40% [S03, S19] — **moderate**
+...
+
+### Identified Gaps
+1. No studies on oxidation kinetics of IG-110 graphite under simultaneous irradiation and air ingress
+2. V&V of oxidation models limited to 1D — no 3D FEM validation studies found
+3. No data on oxidation rate recovery after irradiation annealing
+
+### V&V Status
+- Papers with V&V: 8/24 (33%)
+- V&V types: convergence study (5), comparison with experiments (7), MMS (1), benchmark (3)
+- Notable: Only 1 paper used MMS for code verification
+
+### Cross-References (from grep)
+| Term | Sources |
+|------|---------|
+| FEM\|FEA | S02, S09, S14, S21 |
+| convergence\|mesh independence | S02, S09, S14 |
+| ABAQUS | S02, S14 |
+| MOOSE | S09, S21 |
+| Arrhenius | S01, S04, S07, S12, S15 |
+```
+
+---
+
+## Validation Rules
+
+1. **Required field check**: All schema fields marked without "(optional)" or "No" in the Required column are REQUIRED. Consumer agents MUST verify all required fields are present before proceeding
+2. **Type check**: Fields must match declared types (e.g., `enum` values must be from the allowed set)
+3. **Cross-reference check**: Source IDs referenced in Synthesis must exist in Bibliography; RevisionItem IDs in Response to Reviewers must match the Revision Roadmap
+4. **Version tracking**: Each handoff artifact MUST carry a Material Passport (Schema 9) with a version label. Version labels must be monotonically increasing within a pipeline run
+5. **Failure on missing**: If a required field is missing, return `HANDOFF_INCOMPLETE` with a list of missing fields; do NOT proceed with partial data
+6. **Producer validation**: Producing agent must validate output against its schema BEFORE handoff
+7. **Consumer validation**: Consuming agent should validate input on receipt and request re-generation if schema violations are found
+8. **Integrity gating**: Artifacts that have passed through integrity verification (Schema 5) must have their Material Passport updated with `verification_status: "VERIFIED"` and `integrity_pass_date`
+9. **Staleness detection**: If an upstream artifact is modified after a downstream artifact was produced, the downstream artifact's Material Passport should be updated to `verification_status: "STALE"`
+10. **Passport freshness**: A Material Passport's integrity results are considered STALE if `integrity_pass_date` is more than 24 hours old relative to the current timestamp. Stale passports require re-verification before proceeding
+11. **Stage-skip eligibility via passport**: A passport allows skipping Stage 2.5 (pre-review integrity) ONLY when ALL of the following conditions are met: (a) `verification_status` = `"VERIFIED"`, (b) `integrity_pass_date` is within the current session or less than 24 hours old, (c) `version_label` matches the current artifact version (content has not been modified since verification), and (d) the user explicitly confirms the skip. If any condition fails, full Stage 2.5 re-verification is required
+12. **Passport does not grant Stage 4.5 skip**: The final integrity check (Stage 4.5) can NEVER be skipped via Material Passport, regardless of passport status. Stage 4.5 always requires full Mode 2 verification
