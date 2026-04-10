@@ -72,12 +72,24 @@ Agents are assigned default model tiers to balance quality and API cost.
 
 See `shared/agent_registry.md` for the full per-agent Model column and routing details.
 
+## Domain Note
+
+This package is tuned for **computational mechanics and materials science** — V&V checks, numbered citations, FEM-aware review, mesh convergence evaluation, and computational fallacy detection are built in. These features activate automatically when the user's field is detected as computational mechanics or materials science. The package works for other academic fields too; the computational mechanics features simply won't activate.
+
 ## Style Profile
 
 When drafting or revising academic prose, check `shared/style_profiles/` for an author style profile. If one exists, apply it as a soft writing guide (Priority 3). Discipline and journal conventions always take priority. If no profile exists, skip style calibration or offer to create one from writing samples.
 
+## First-Use Reminder
+
+On the user's first interaction with any skill, check if `shared/style_profiles/` contains only `example_profile.md` (no personal profiles). If so, mention once:
+
+> "I can learn your writing style from your previous papers — just drop 2-3 PDFs and say 'calibrate my style.' This is optional but helps drafts sound like you, not like AI."
+
+Do not repeat this reminder after the first mention.
+
 ## Version Info
 - **Version**: 3.0
-- **Last Updated**: 2026-04-07
-- **Author**: Cheng-I Wu
+- **Last Updated**: 2026-04-10
 - **License**: CC-BY-NC 4.0
+- **Derived from**: [academic-research-skills](https://github.com/Imbad0202/academic-research-skills) by Cheng-I Wu
